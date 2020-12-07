@@ -1,10 +1,7 @@
-import 'dart:developer';
-
 import 'package:asd/scoped-model/main.dart';
 import 'package:flutter/material.dart';
 import 'package:scoped_model/scoped_model.dart';
-
-enum AuthMode { Signup, Login }
+import '../models/authMode.dart';
 
 class AuthPage extends StatefulWidget {
   @override
@@ -15,7 +12,7 @@ class AuthPage extends StatefulWidget {
 
 class _AuthPageState extends State<AuthPage> {
   final Map<String, dynamic> _formData = {
-    'email': null,
+    'email': 'null',
     'password': null,
     'acceptTerms': false
   };
@@ -92,13 +89,33 @@ class _AuthPageState extends State<AuthPage> {
     );
   }
 
-  void _submitForm(Function login) {
+  void _submitForm(Function authenticating) async {
     if (!_formKey.currentState.validate() || !_formData['acceptTerms']) {
       return;
     }
     _formKey.currentState.save();
-    login(_formData['email'], _formData['password']);
-    Navigator.pushReplacementNamed(context, '/products');
+
+    final Map<String, dynamic> succesInformation = await authenticating(
+        _formData['email'], _formData['password'], _authMode);
+    if (succesInformation['succes'] == true) {
+      Navigator.pushReplacementNamed(context, '/products');
+    } else {
+      showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text('An error Occurred'),
+              content: Text(
+                succesInformation['message'],
+              ),
+              actions: [
+                FlatButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: Text('Okay!'))
+              ],
+            );
+          });
+    }
   }
 
   @override
@@ -153,11 +170,15 @@ class _AuthPageState extends State<AuthPage> {
                     ),
                     ScopedModelDescendant<MainModel>(builder:
                         (BuildContext context, Widget child, MainModel model) {
-                      return RaisedButton(
-                        textColor: Colors.white,
-                        child: Text('LOGIN'),
-                        onPressed: () => _submitForm(model.login),
-                      );
+                      return model.isLoading == true
+                          ? Center(child: CircularProgressIndicator())
+                          : RaisedButton(
+                              textColor: Colors.white,
+                              child: Text(
+                                  '${_authMode == AuthMode.Login ? 'Login' : 'Signup'}'),
+                              onPressed: () =>
+                                  _submitForm(model.authenticating),
+                            );
                     }),
                   ],
                 ),
