@@ -206,6 +206,8 @@ class ProductsModel extends ConnectedProductsModel {
 }
 
 class UserModel extends ConnectedProductsModel {
+  // bool isAuth = false;
+
   // void login(String email, String password) {
   //   _authenticatedUser =
   //       User(id: 'fdalsdfasf', email: email, password: password);
@@ -253,7 +255,10 @@ class UserModel extends ConnectedProductsModel {
           id: responseData['localId'],
           email: email,
           token: responseData['idToken']);
+      // isAuth = true;
+
       final SharedPreferences prefs = await SharedPreferences.getInstance();
+      // prefs.setBool('is', isAuth);
       prefs.setString('token', responseData['idToken']);
       prefs.setString('userEmail', email);
       prefs.setString('userId', responseData['localId']);
@@ -277,7 +282,14 @@ class UserModel extends ConnectedProductsModel {
     return {'succes': !hasError, 'message': message};
   }
 
+  Future<bool> get isAuthe async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    bool z = prefs.getBool('is');
+    return z;
+  }
+
   autoAuthenticate() async {
+    _isLoading = true;
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String token = prefs.getString('token');
     if (token != null) {
@@ -285,13 +297,20 @@ class UserModel extends ConnectedProductsModel {
       final String userId = prefs.getString('userId');
       print(userId.toString());
       _authenticatedUser = User(id: userId, email: userEmail, token: token);
-      notifyListeners();
+      print('is auth cheked');
     }
+    _isLoading = false;
+    notifyListeners();
   }
 }
 
 class UtilityModel extends ConnectedProductsModel {
   bool get isLoading {
     return _isLoading;
+  }
+
+  void setLoading(bool f) {
+    _isLoading = f;
+    notifyListeners();
   }
 }

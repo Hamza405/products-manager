@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:asd/pages/products_admin.dart';
+import 'package:asd/pages/splash_screen.dart';
 
 import 'package:flutter/material.dart';
 import 'package:scoped_model/scoped_model.dart';
@@ -21,12 +24,13 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   final MainModel _model = MainModel();
+  @override
+  void initState() {
+    _model.setLoading(true);
+    _model.autoAuthenticate();
 
-  // @override
-  // void initState() {
-  //   super.initState();
-  //   _model.autoAuthenticate();
-  // }
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,16 +42,8 @@ class _MyAppState extends State<MyApp> {
             primaryColor: Colors.deepOrange,
             accentColor: Colors.deepPurple,
             buttonColor: Colors.deepPurple),
-        // home: ManageProducts(),
         routes: {
-          '/': (BuildContext context) => ScopedModelDescendant(
-                builder: (BuildContext context, Widget child, MainModel model) {
-                  // print('the token');
-                  // print(model.user.token.toString());
-
-                  return model.user == null ? AuthPage() : ProductsPage(_model);
-                },
-              ),
+          '/': (BuildContext context) => SplashScreen(_model),
           '/productsPage': (BuildContext context) => ProductsPage(_model),
           '/admin': (BuildContext context) => ProductsAdminPage(_model),
         },
