@@ -1,39 +1,28 @@
 import 'dart:async';
-
-import 'package:asd/pages/products.dart';
-import 'package:asd/scoped-model/main.dart';
 import 'package:flutter/material.dart';
-import 'package:scoped_model/scoped_model.dart';
-
-import 'auth.dart';
 
 class SplashScreen extends StatefulWidget {
-  final MainModel _model;
-  SplashScreen(this._model);
-
+  final BuildContext context;
+  SplashScreen(this.context);
   @override
   State<StatefulWidget> createState() {
-    return SplashScreenState();
+    return SplashScreenState(context);
   }
 }
 
 class SplashScreenState extends State<SplashScreen> {
-  startTime() async {
-    var _duration = new Duration(seconds: 4);
-    return new Timer(_duration, () {
-      if (widget._model.user == null) {
-        Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (BuildContext context) => AuthPage()));
-      } else {
-        Navigator.of(context).pushReplacement(MaterialPageRoute(
-            builder: (BuildContext context) => ProductsPage(widget._model)));
-      }
-    });
+  final BuildContext context;
+  SplashScreenState(this.context);
+  void initState() {
+    startTime(context);
+    super.initState();
   }
 
-  void initState() {
-    super.initState();
-    startTime();
+  startTime(BuildContext context) async {
+    var _duration = new Duration(seconds: 3);
+    return new Timer(_duration, () {
+      Navigator.pushReplacementNamed(context, '/');
+    });
   }
 
   @override

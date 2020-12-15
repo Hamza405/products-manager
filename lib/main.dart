@@ -1,12 +1,9 @@
-import 'dart:async';
-
+import 'package:asd/pages/auth.dart';
 import 'package:asd/pages/products_admin.dart';
-import 'package:asd/pages/splash_screen.dart';
 
 import 'package:flutter/material.dart';
 import 'package:scoped_model/scoped_model.dart';
 import 'models/product.dart';
-import 'pages/auth.dart';
 import 'pages/product.dart';
 import 'pages/products.dart';
 import 'package:asd/scoped-model/main.dart';
@@ -24,10 +21,17 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   final MainModel _model = MainModel();
+  bool _isAuth = false;
   @override
   void initState() {
-    _model.setLoading(true);
     _model.autoAuthenticate();
+    _model.userSubject.listen((bool isAuth) {
+      setState(() {
+        print(isAuth);
+        _isAuth = isAuth;
+      });
+    });
+    print(_isAuth);
 
     super.initState();
   }
@@ -42,10 +46,15 @@ class _MyAppState extends State<MyApp> {
             primaryColor: Colors.deepOrange,
             accentColor: Colors.deepPurple,
             buttonColor: Colors.deepPurple),
+        // builder: (BuildContext context, Widget child) {
+        //   print('mainBuldert');
+        //   return SplashScreen(context);
+        // },
         routes: {
-          '/': (BuildContext context) => SplashScreen(_model),
-          '/productsPage': (BuildContext context) => ProductsPage(_model),
-          '/admin': (BuildContext context) => ProductsAdminPage(_model),
+          '/': (BuildContext context) =>
+              !_isAuth ? AuthPage() : ProductsPage(_model),
+          '/admin': (BuildContext context) =>
+              !_isAuth ? AuthPage() : ProductsAdminPage(_model),
         },
         onGenerateRoute: (RouteSettings settings) {
           final List<String> pathElements = settings.name.split('/');
@@ -60,13 +69,15 @@ class _MyAppState extends State<MyApp> {
             });
 
             return MaterialPageRoute<bool>(
-                builder: (BuildContext context) => ProductPage(myProduct));
+                builder: (BuildContext context) =>
+                    !_isAuth ? AuthPage() : ProductPage(myProduct));
           }
           return null;
         },
         onUnknownRoute: (RouteSettings settings) {
           return MaterialPageRoute(
-              builder: (BuildContext context) => ProductsPage(_model));
+              builder: (BuildContext context) =>
+                  !_isAuth ? AuthPage() : ProductsPage(_model));
         },
       ),
     );

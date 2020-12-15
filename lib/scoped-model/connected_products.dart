@@ -5,6 +5,7 @@ import '../models/product.dart';
 import 'package:http/http.dart' as http;
 import '../models/user.dart';
 import '../models/authMode.dart';
+import 'package:rxdart/rxdart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ConnectedProductsModel extends Model {
@@ -147,10 +148,11 @@ class ProductsModel extends ConnectedProductsModel {
     return true;
   }
 
-  Future<bool> fetchProduct() {
+  Future<Null> fetchProduct() async {
     _isLoading = true;
-    return http
-        .get('https://flutter-products-b1170.firebaseio.com/products.json')
+    return await http
+        .get(
+            'https://flutter-products-b1170.firebaseio.com/products.json?auth=${_authenticatedUser.token}')
         .then<Null>((http.Response response) {
       final List<Product> fetchProductList = [];
       final Map<String, dynamic> productsListData = jsonDecode(response.body);
@@ -167,7 +169,11 @@ class ProductsModel extends ConnectedProductsModel {
             image: productData['image'],
             price: productData['price'],
             userEmail: productData['userEmail'],
-            userId: productData['userId']);
+            userId: productData['userId'],
+            isFavorite: productData['wishListUser'] == null
+                ? false
+                : (productData['wishListUser'] as Map<String, dynamic>)
+                    .containsKey(_authenticatedUser.id));
         fetchProductList.add(product);
       });
       _products = fetchProductList;
@@ -177,7 +183,7 @@ class ProductsModel extends ConnectedProductsModel {
     });
   }
 
-  void toggleProductFavoriteStatus() {
+  void toggleProductFavoriteStatus() async {
     final bool isCurrentlyFavorite = selectedProduct.isFavorite;
     final bool newFavoriteStatus = !isCurrentlyFavorite;
     final Product updatedProduct = Product(
@@ -190,9 +196,76 @@ class ProductsModel extends ConnectedProductsModel {
         userEmail: _authenticatedUser.email,
         userId: _authenticatedUser.id);
     _products[selectedProductIndex] = updatedProduct;
+    notifyListeners();
+    http.Response response;
+    try {
+      if (newFavoriteStatus) {
+        response = await http.put(
+            'https://flutter-products-b1170.firebaseio.com/products/${selectedProduct.id}/wishListUser/${_authenticatedUser.id}.json?auth=${_authenticatedUser.token}',
+            body: json.encode(true));
+      } else {
+        response = await http.delete(
+            'https://flutter-products-b1170.firebaseio.com/products/${selectedProduct.id}/wishListUser/${_authenticatedUser.id}.json?auth=${_authenticatedUser.token}');
+      }
+    } catch (e) {
+      final Product updatedProduct = Product(
+          id: selectedProduct.id,
+          title: selectedProduct.title,
+          description: selectedProduct.description,
+          price: selectedProduct.price,
+          image: selectedProduct.image,
+          isFavorite: !newFavoriteStatus,
+          userEmail: selectedProduct.userEmail,
+          userId: selectedProduct.userId);
+      _products[selectedProductIndex] = updatedProduct;
+      notifyListeners();
+    }
     _selProductId = null;
     notifyListeners();
   }
+
+  // void toggleProductFavoriteStatus() async {
+  //   final bool isCurrentlyFavorite = selectedProduct.isFavorite;
+  //   final bool newFavoriteStatus = !isCurrentlyFavorite;
+  //   print('Connect id' + selectedProduct.id.toString());
+  //   final Product updatedProduct = Product(
+  //       id: selectedProduct.id,
+  //       title: selectedProduct.title,
+  //       description: selectedProduct.description,
+  //       price: selectedProduct.price,
+  //       image: selectedProduct.image,
+  //       isFavorite: newFavoriteStatus,
+  //       userEmail: _authenticatedUser.email,
+  //       userId: _authenticatedUser.id);
+  //   _products[selectedProductIndex] = updatedProduct;
+  //   _selProductId = null;
+  //   notifyListeners();
+  //   http.Response response;
+  //   try {
+  //     if (newFavoriteStatus) {
+  //       response = await http.put(
+  //           'https://flutter-products-b1170.firebaseio.com/products/${selectedProduct.id}/wishListUser/${_authenticatedUser.id}.json?auth=${_authenticatedUser.token}',
+  //           body: json.encode(true));
+  //     } else {
+  //       response = await http.delete(
+  //           'https://flutter-products-b1170.firebaseio.com/products/${selectedProduct.id}/wishListUser/${_authenticatedUser.id}.json?auth=${_authenticatedUser.token}');
+  //     }
+  //   } catch (e) {
+  //     final Product updatedProduct = Product(
+  //         id: selectedProduct.id,
+  //         title: selectedProduct.title,
+  //         description: selectedProduct.description,
+  //         price: selectedProduct.price,
+  //         image: selectedProduct.image,
+  //         isFavorite: !newFavoriteStatus,
+  //         userEmail: selectedProduct.userEmail,
+  //         userId: selectedProduct.userId);
+  //     _products[selectedProductIndex] = updatedProduct;
+  //     _selProductId = null;
+  //     print(e.toString());
+  //     notifyListeners();
+  //   }
+  // }
 
   void selectProduct(String productId) {
     _selProductId = productId;
@@ -206,12 +279,13 @@ class ProductsModel extends ConnectedProductsModel {
 }
 
 class UserModel extends ConnectedProductsModel {
-  // bool isAuth = false;
+  Timer _authTimer;
 
-  // void login(String email, String password) {
-  //   _authenticatedUser =
-  //       User(id: 'fdalsdfasf', email: email, password: password);
-  // }
+  PublishSubject<bool> _userSubject = PublishSubject();
+
+  PublishSubject<bool> get userSubject {
+    return _userSubject;
+  }
 
   User get user {
     return _authenticatedUser;
@@ -255,13 +329,18 @@ class UserModel extends ConnectedProductsModel {
           id: responseData['localId'],
           email: email,
           token: responseData['idToken']);
-      // isAuth = true;
+
+      setAuthTimeout(int.parse(responseData['expiresIn']));
+      _userSubject.add(true);
+      final DateTime now = DateTime.now();
+      final DateTime expiryTime =
+          now.add(Duration(seconds: int.parse(responseData['expiresIn'])));
 
       final SharedPreferences prefs = await SharedPreferences.getInstance();
-      // prefs.setBool('is', isAuth);
       prefs.setString('token', responseData['idToken']);
       prefs.setString('userEmail', email);
       prefs.setString('userId', responseData['localId']);
+      prefs.setString('expiryTime', expiryTime.toIso8601String());
     } else if (responseData['error']['message'] == 'EMAIL_EXISTS') {
       message = 'The email Already Exists!';
     } else if (responseData['error']['message'] == 'OPERATION_NOT_ALLOWED') {
@@ -282,25 +361,40 @@ class UserModel extends ConnectedProductsModel {
     return {'succes': !hasError, 'message': message};
   }
 
-  Future<bool> get isAuthe async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    bool z = prefs.getBool('is');
-    return z;
-  }
-
   autoAuthenticate() async {
-    _isLoading = true;
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String token = prefs.getString('token');
+    final String expiryTime = prefs.getString('expiryTime');
     if (token != null) {
+      final DateTime now = DateTime.now();
+      final DateTime parsedExpiryTime = DateTime.parse(expiryTime);
+      if (parsedExpiryTime.isBefore(now)) {
+        _authenticatedUser = null;
+        _isLoading = false;
+        notifyListeners();
+        return;
+      }
       final String userEmail = prefs.getString('userEmail');
       final String userId = prefs.getString('userId');
-      print(userId.toString());
+      final int tokenLifeSpan = parsedExpiryTime.difference(now).inSeconds;
       _authenticatedUser = User(id: userId, email: userEmail, token: token);
-      print('is auth cheked');
+      _userSubject.add(true);
+      setAuthTimeout(tokenLifeSpan);
     }
-    _isLoading = false;
+
     notifyListeners();
+  }
+
+  void logout() async {
+    _authenticatedUser = null;
+    _authTimer = null;
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.clear();
+    _userSubject.add(false);
+  }
+
+  void setAuthTimeout(int time) {
+    _authTimer = Timer(Duration(seconds: time), logout);
   }
 }
 

@@ -30,6 +30,9 @@ class ProductCard extends StatelessWidget {
           IconButton(
               onPressed: () {
                 model.selectProduct(model.allproducts[productIndex].id);
+                print(model.allproducts[productIndex].id.toString());
+                print(model.user.id.toString());
+
                 model.toggleProductFavoriteStatus();
               },
               icon: Icon(
@@ -65,7 +68,7 @@ class ProductCard extends StatelessWidget {
                 SizedBox(
                   width: 10,
                 ),
-                PriceTag(product.title.toString())
+                PriceTag(product.price.toString())
               ],
             )),
         AdressTag('Latakia , Bsnada'),

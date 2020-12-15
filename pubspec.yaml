@@ -31,6 +31,7 @@ dependencies:
   scoped_model: ^1.1.0
   http: ^0.12.2
   shared_preferences: ^0.5.12+4
+  rxdart: ^0.25.0
   
 
 dev_dependencies:

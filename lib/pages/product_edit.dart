@@ -129,7 +129,7 @@ class _ProductEditPageState extends State<ProductEditPage> {
         _dataForm['price'],
       ).then((bool s) {
         if (s) {
-          Navigator.pushReplacementNamed(context, '/productPage');
+          Navigator.pushReplacementNamed(context, '/');
         } else {
           showDialog(
               context: context,
@@ -146,7 +146,7 @@ class _ProductEditPageState extends State<ProductEditPage> {
               description: _dataForm['description'],
               price: _dataForm['price'],
               image: _dataForm['image'])
-          .then((_) => Navigator.pushReplacementNamed(context, '/productPage'));
+          .then((_) => Navigator.pushReplacementNamed(context, '/'));
     }
 
     ;
