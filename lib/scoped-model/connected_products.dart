@@ -148,7 +148,7 @@ class ProductsModel extends ConnectedProductsModel {
     return true;
   }
 
-  Future<Null> fetchProduct() async {
+  Future<Null> fetchProduct({onlyUser = false}) async {
     _isLoading = true;
     return await http
         .get(
@@ -176,7 +176,11 @@ class ProductsModel extends ConnectedProductsModel {
                     .containsKey(_authenticatedUser.id));
         fetchProductList.add(product);
       });
-      _products = fetchProductList;
+      _products = onlyUser == true
+          ? fetchProductList.where((Product product) {
+              return product.userId == _authenticatedUser.id;
+            }).toList()
+          : fetchProductList;
       _isLoading = false;
       notifyListeners();
       return;
@@ -223,49 +227,6 @@ class ProductsModel extends ConnectedProductsModel {
     _selProductId = null;
     notifyListeners();
   }
-
-  // void toggleProductFavoriteStatus() async {
-  //   final bool isCurrentlyFavorite = selectedProduct.isFavorite;
-  //   final bool newFavoriteStatus = !isCurrentlyFavorite;
-  //   print('Connect id' + selectedProduct.id.toString());
-  //   final Product updatedProduct = Product(
-  //       id: selectedProduct.id,
-  //       title: selectedProduct.title,
-  //       description: selectedProduct.description,
-  //       price: selectedProduct.price,
-  //       image: selectedProduct.image,
-  //       isFavorite: newFavoriteStatus,
-  //       userEmail: _authenticatedUser.email,
-  //       userId: _authenticatedUser.id);
-  //   _products[selectedProductIndex] = updatedProduct;
-  //   _selProductId = null;
-  //   notifyListeners();
-  //   http.Response response;
-  //   try {
-  //     if (newFavoriteStatus) {
-  //       response = await http.put(
-  //           'https://flutter-products-b1170.firebaseio.com/products/${selectedProduct.id}/wishListUser/${_authenticatedUser.id}.json?auth=${_authenticatedUser.token}',
-  //           body: json.encode(true));
-  //     } else {
-  //       response = await http.delete(
-  //           'https://flutter-products-b1170.firebaseio.com/products/${selectedProduct.id}/wishListUser/${_authenticatedUser.id}.json?auth=${_authenticatedUser.token}');
-  //     }
-  //   } catch (e) {
-  //     final Product updatedProduct = Product(
-  //         id: selectedProduct.id,
-  //         title: selectedProduct.title,
-  //         description: selectedProduct.description,
-  //         price: selectedProduct.price,
-  //         image: selectedProduct.image,
-  //         isFavorite: !newFavoriteStatus,
-  //         userEmail: selectedProduct.userEmail,
-  //         userId: selectedProduct.userId);
-  //     _products[selectedProductIndex] = updatedProduct;
-  //     _selProductId = null;
-  //     print(e.toString());
-  //     notifyListeners();
-  //   }
-  // }
 
   void selectProduct(String productId) {
     _selProductId = productId;
