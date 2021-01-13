@@ -6,6 +6,7 @@ import 'models/product.dart';
 import 'pages/product.dart';
 import 'pages/products.dart';
 import 'package:asd/scoped-model/main.dart';
+import 'package:flutter/services.dart';
 
 main() {
   runApp(MyApp());
@@ -21,6 +22,7 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   final MainModel _model = MainModel();
   bool _isAuth = false;
+
   @override
   void initState() {
     _model.autoAuthenticate();

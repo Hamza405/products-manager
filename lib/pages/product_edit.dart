@@ -2,7 +2,6 @@ import 'package:asd/scoped-model/main.dart';
 import 'package:asd/widgets/ensure_visible.dart';
 import 'package:flutter/material.dart';
 import 'package:asd/models/product.dart';
-
 import 'package:scoped_model/scoped_model.dart';
 
 class ProductEditPage extends StatefulWidget {
@@ -16,13 +15,17 @@ class _ProductEditPageState extends State<ProductEditPage> {
     'title': null,
     'description': null,
     'price': null,
-    'image': 'assets/food.jpg'
+    'image': 'assets/food.jpg',
+    'address': null
   };
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final _titleFocusNode = FocusNode();
   final _descriptionFocusNode = FocusNode();
   final _priceFocusNode = FocusNode();
+  final _addressFocusNode = FocusNode();
+  void Function(void) asd;
+  final TextEditingController c = new TextEditingController();
 
   Widget _buildTitleTextField(Product product) {
     return EnsureVisibleWhenFocused(
@@ -81,6 +84,21 @@ class _ProductEditPageState extends State<ProductEditPage> {
     );
   }
 
+  Widget _buildAddressTextField(Product product) {
+    return EnsureVisibleWhenFocused(
+      focusNode: _addressFocusNode,
+      child: TextFormField(
+        controller: c,
+
+        decoration: InputDecoration(labelText: 'Address'),
+        // initialValue: product == null ? '' : product.address.toString(),
+        onSaved: (String value) {
+          _dataForm['address'] = value;
+        },
+      ),
+    );
+  }
+
   Widget _buildSubmitButton(Product product) {
     return ScopedModelDescendant<MainModel>(
         builder: (BuildContext context, Widget child, MainModel model) {
@@ -92,6 +110,27 @@ class _ProductEditPageState extends State<ProductEditPage> {
               onPressed: () => sumbitForm(model.addProduct, model.updateProduct,
                   model.selectedProductIndex),
             );
+    });
+  }
+
+  Widget _buildAddressButton(Product product) {
+    return ScopedModelDescendant<MainModel>(
+        builder: (BuildContext context, Widget child, MainModel model) {
+      return model.addressIsLoading
+          ? Center(child: CircularProgressIndicator())
+          : RaisedButton(
+              child: Text('My Address'),
+              textColor: Colors.white,
+              onPressed: () {
+                model.getLoc();
+                model.isAddressFounded.listen((bool address) {
+                  if (address) {
+                    c.text = model.currentAddress == null
+                        ? "getting address"
+                        : model.currentAddress;
+                  }
+                });
+              });
     });
   }
 
@@ -116,6 +155,11 @@ class _ProductEditPageState extends State<ProductEditPage> {
                 _buildTitleTextField(product),
                 _buildDescriptionTextField(product),
                 _buildPriceTextField(product),
+                _buildAddressTextField(product),
+                SizedBox(
+                  height: 10.0,
+                ),
+                _buildAddressButton(product),
                 SizedBox(
                   height: 10.0,
                 ),
@@ -135,12 +179,9 @@ class _ProductEditPageState extends State<ProductEditPage> {
     }
     _formKey.currentState.save();
     if (selectedProductIndex == -1) {
-      addProduct(
-        _dataForm['title'],
-        _dataForm['description'],
-        _dataForm['image'],
-        _dataForm['price'],
-      ).then((bool s) {
+      addProduct(_dataForm['title'], _dataForm['description'],
+              _dataForm['image'], _dataForm['price'], _dataForm['address'])
+          .then((bool s) {
         if (s) {
           Navigator.pushReplacementNamed(context, '/');
         } else {
@@ -158,7 +199,8 @@ class _ProductEditPageState extends State<ProductEditPage> {
               title: _dataForm['title'],
               description: _dataForm['description'],
               price: _dataForm['price'],
-              image: _dataForm['image'])
+              image: _dataForm['image'],
+              address: _dataForm['address'])
           .then((_) => Navigator.pushReplacementNamed(context, '/'));
     }
 

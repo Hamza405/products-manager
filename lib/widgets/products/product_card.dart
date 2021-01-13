@@ -71,7 +71,7 @@ class ProductCard extends StatelessWidget {
                 PriceTag(product.price.toString())
               ],
             )),
-        AdressTag('Latakia , Bsnada'),
+        AdressTag(product.address),
         Text(product.userEmail),
         _buildActionButton(context),
       ]),

@@ -1,3 +1,4 @@
+import 'package:latlng/latlng.dart';
 import 'package:scoped_model/scoped_model.dart';
 import 'dart:convert';
 import 'dart:async';
@@ -7,6 +8,8 @@ import '../models/user.dart';
 import '../models/authMode.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:location/location.dart';
+import 'package:geocoder/geocoder.dart';
 
 class ConnectedProductsModel extends Model {
   List<Product> _products = [];
@@ -52,8 +55,8 @@ class ProductsModel extends ConnectedProductsModel {
     return _showFavorites;
   }
 
-  Future<bool> addProduct(
-      String title, String description, String image, double price) async {
+  Future<bool> addProduct(String title, String description, String image,
+      double price, String address) async {
     _isLoading = true;
     notifyListeners();
     final Map<String, dynamic> productData = {
@@ -62,6 +65,7 @@ class ProductsModel extends ConnectedProductsModel {
       'image':
           'https://cdn.pixabay.com/photo/2015/10/02/12/00/chocolate-968457_960_720.jpg',
       'price': price,
+      'address': address,
       'userEmail': _authenticatedUser.email,
       'userId': _authenticatedUser.id
     };
@@ -77,6 +81,7 @@ class ProductsModel extends ConnectedProductsModel {
           description: description,
           price: price,
           image: image,
+          address: address,
           userEmail: _authenticatedUser.email,
           userId: _authenticatedUser.id);
       _products.add(_newProduct);
@@ -92,7 +97,11 @@ class ProductsModel extends ConnectedProductsModel {
   }
 
   Future<bool> updateProduct(
-      {String title, String description, String image, double price}) async {
+      {String title,
+      String description,
+      String image,
+      double price,
+      String address}) async {
     _isLoading = true;
     notifyListeners();
     final Map<String, dynamic> updateProduct = {
@@ -101,6 +110,7 @@ class ProductsModel extends ConnectedProductsModel {
       'image':
           'https://cdn.pixabay.com/photo/2015/10/02/12/00/chocolate-968457_960_720.jpg',
       'price': price,
+      'address': address,
       'userEmail': _authenticatedUser.email,
       'userId': _authenticatedUser.id,
     };
@@ -116,6 +126,7 @@ class ProductsModel extends ConnectedProductsModel {
           description: description,
           price: price,
           image: image,
+          address: address,
           userEmail: _authenticatedUser.email,
           userId: _authenticatedUser.id);
 
@@ -168,6 +179,7 @@ class ProductsModel extends ConnectedProductsModel {
             description: productData['description'],
             image: productData['image'],
             price: productData['price'],
+            address: productData['address'],
             userEmail: productData['userEmail'],
             userId: productData['userId'],
             isFavorite: productData['wishListUser'] == null
@@ -196,6 +208,7 @@ class ProductsModel extends ConnectedProductsModel {
         description: selectedProduct.description,
         price: selectedProduct.price,
         image: selectedProduct.image,
+        address: selectedProduct.address,
         isFavorite: newFavoriteStatus,
         userEmail: _authenticatedUser.email,
         userId: _authenticatedUser.id);
@@ -218,6 +231,7 @@ class ProductsModel extends ConnectedProductsModel {
           description: selectedProduct.description,
           price: selectedProduct.price,
           image: selectedProduct.image,
+          address: selectedProduct.address,
           isFavorite: !newFavoriteStatus,
           userEmail: selectedProduct.userEmail,
           userId: selectedProduct.userId);
@@ -356,6 +370,70 @@ class UserModel extends ConnectedProductsModel {
 
   void setAuthTimeout(int time) {
     _authTimer = Timer(Duration(seconds: time), logout);
+  }
+}
+
+class AddressModel extends ConnectedProductsModel {
+  PublishSubject<bool> _isAddressFounded = PublishSubject();
+  LocationData _currentPosition;
+  String _address, _dateTime;
+  LatLng _initialcameraposition = LatLng(0.5937, 0.9629);
+
+  bool _addressIsLoading = false;
+
+  String get currentAddress {
+    return _address;
+  }
+
+  bool get addressIsLoading {
+    return _addressIsLoading;
+  }
+
+  Location location = Location();
+  getLoc() async {
+    _addressIsLoading = true;
+    notifyListeners();
+    bool _serviceEnabled;
+    PermissionStatus _permissionGranted;
+
+    _serviceEnabled = await location.serviceEnabled();
+    if (!_serviceEnabled) {
+      _serviceEnabled = await location.requestService();
+      if (!_serviceEnabled) {
+        return;
+      }
+    }
+
+    _permissionGranted = await location.hasPermission();
+    if (_permissionGranted == PermissionStatus.denied) {
+      _permissionGranted = await location.requestPermission();
+      if (_permissionGranted != PermissionStatus.granted) {
+        return;
+      }
+    }
+
+    _currentPosition = await location.getLocation();
+    _initialcameraposition =
+        LatLng(_currentPosition.latitude, _currentPosition.longitude);
+    List<Address> value = await _getAddress(
+        _currentPosition.latitude, _currentPosition.longitude);
+
+    _address = "${value.first.addressLine}";
+    print(value.first.addressLine);
+    _isAddressFounded.add(true);
+    _addressIsLoading = false;
+    notifyListeners();
+  }
+
+  PublishSubject<bool> get isAddressFounded {
+    return _isAddressFounded;
+  }
+
+  Future<List<Address>> _getAddress(double lat, double lang) async {
+    final coordinates = new Coordinates(lat, lang);
+    List<Address> add =
+        await Geocoder.local.findAddressesFromCoordinates(coordinates);
+    return add;
   }
 }
 

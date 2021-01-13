@@ -6,6 +6,7 @@ class Product {
   final String description;
   final double price;
   final String image;
+  final String address;
   final bool isFavorite;
   final String userEmail;
   final String userId;
@@ -16,6 +17,7 @@ class Product {
       @required this.description,
       @required this.price,
       @required this.image,
+      @required this.address,
       @required this.userEmail,
       @required this.userId,
       this.isFavorite = false});
